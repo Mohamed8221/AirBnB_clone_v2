@@ -10,34 +10,24 @@ Base = declarative_base()
 class BaseModel:
     """A base class for all hbnb models"""
     id = Column(String(60), nullable=False, primary_key=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow())
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow())
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     def __init__(self, *args, **kwargs):
-        """Instatntiates a new model"""
-        if not kwargs:
-            from models import storage
-            self.id = str(uuid.uuid4())
-            self.created_at = self.updated_at = datetime.now()
-        else:
+        """Instantiates a new model"""
+        if kwargs:
             for key, value in kwargs.items():
                 if key == "created_at" or key == "updated_at":
-                    if type(value) is str:
-                        setattr(self, key, datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f"))
-                else:
+                    value = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+                if key != "__class__":
                     setattr(self, key, value)
-            if "id" not in kwargs.keys():
-                setattr(self, "id", str(uuid.uuid4()))
             time = datetime.now()
-            if "created_at" not in kwargs.keys():
-                setattr(self, "created_at", time)
-            if "updated_at" not in kwargs.keys():
-                setattr(self, "updated_at", time)
-
-    def __str__(self):
-        """Returns a string representation of the instance"""
-        cls = (str(type(self)).split('.')[-1]).split('\'')[0]
-        return '[{}] ({}) {}'.format(cls, self.id, self.__dict__)
+            self.id = str(uuid.uuid4())
+            self.created_at = time
+            self.updated_at = time
+        else:
+            from models import storage
+            storage.new(self)
 
     def save(self):
         """Updates updated_at with current time when instance is changed"""
@@ -53,10 +43,10 @@ class BaseModel:
 
     def to_dict(self):
         """Convert instance into dict format"""
-        dictionary = {}
-        dictionary.update(self.__dict__)
-        dictionary.update({'__class__':
-                          (str(type(self)).split('.')[-1]).split('\'')[0]})
+        dictionary = self.__dict__.copy()
+        dictionary['__class__'] = self.__class__.__name__
         dictionary['created_at'] = self.created_at.isoformat()
         dictionary['updated_at'] = self.updated_at.isoformat()
+        if '_sa_instance_state' in dictionary:
+            del dictionary['_sa_instance_state']
         return dictionary
